@@ -73,11 +73,11 @@ class Record(object):
 
 class Data(object):
     def __init__(self, size, range_l=10000, options=None):
-        self.__size = size
-        self.size = size
-        self.range_l = range_l
+        self.__size = int(size)
+        self.size = int(size)
+        self.range_l = int(range_l)
         self.options = options
-        self.__cursor = 0
+        self.__cursor = int(0)
         self.reset()
 
     def hook_get_item(self, index):

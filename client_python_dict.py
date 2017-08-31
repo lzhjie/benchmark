@@ -48,4 +48,4 @@ if __name__ == "__main__":
         option.set("record_num", 100000)
     print(option)
     result = multi_process_bench(option, PythonDict, DataRecord)
-    print result
+    #print(result)
