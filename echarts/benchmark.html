@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="height: 100%; margin: 0">
+file in server: <input id="f" type="text" style="width: 250px"/>
+<input id="submit" type="button" value=" submit "/>
+<input id="select" type="file" hidden="true"/>
+<br/>
+<div id="container" style="height: 95%"/>
+<script type="text/javascript" src="echarts-all-3.js"></script>
+<script id="data" type="text/javascript"></script>
+<script type="text/javascript">
+option = null;
+option = {
+    title : {
+        text: ' ',
+        subtext: "ecomfe.github.io",
+        sublink: 'https://ecomfe.github.io/echarts-examples/public/editor.html?c=bar1'
+    },
+    tooltip : {trigger: 'axis'},
+    legend: {},
+    toolbox: {
+        show : true,
+        feature : {
+            dataView : {show: true, readOnly: false},
+            magicType : {show: true, type: ['line', 'bar']},
+            restore : {show: true},
+            saveAsImage : {show: true}
+        }
+    },
+    calculable : true,
+    xAxis : [{type : 'category',}],
+    yAxis : [{type : 'value',name: 'qps',}],
+    series : []
+};
+
+function showChart(option_template, data) {
+   var option_new = option_template
+   option_new.title.text = data.title
+   option_new.xAxis[0].data = data.category
+   var type= (data.category.length > 10) ? "line" : "bar"
+   var series = data.series
+   var mark_line = {data : [{type : 'max'}], symbolSize:[0,0], silent:true};
+   var legend_data = []
+   for(var i = 0; i<series.length; ++i) {
+     legend_data.push(series[i].legend)
+     option_new.series.push({name:series[i].legend,type:type,data:series[i].data,markLine:mark_line})
+   }
+   option_new.legend.data = legend_data
+   var myChart = echarts.init(document.getElementById("container"));
+   myChart.setOption(option_new, true);
+}
+function loadData(name) {
+    if(window.location.search) {
+      name = window.location.search.split("=")[1]
+      //alert("new name" + name)
+    }
+    var script= document.getElementById("data");
+    script.src= name;
+    script.onreadystatechange= function(){
+      var r = script.readyState;
+      if (r === 'loaded' || r === 'complete') {
+        showChart(option, benchmark_data)
+      }
+    }
+    script.onload = function() {
+      showChart(option, benchmark_data)
+    }
+}
+function initFileSelector()
+{
+   var submit = document.getElementById("submit");
+   submit.onclick = function() {
+      var file_name = document.getElementById("f").value;
+      if(file_name.search(/benchmark.*\.js$/) >= 0) {
+        window.location.href = window.location.href.split("?")[0] + "?f="+file_name;
+      }
+      else {
+        alert("require benchmark.*.js")
+      }
+   }
+   if(window.location.protocol == "file:"){
+      var file = document.getElementById("select")
+      file.hidden = false
+      file.onchange = function(){
+        real_name = this.value.split("\\")
+        real_name = real_name[real_name.length-1]
+        document.getElementById("f").value = "history/"+real_name
+      }
+   }
+   else {
+      var file_s = document.getElementById("select")
+      file_s.parentNode.removeChild(file_s);
+   }
+}
+window.onload = function() {
+  initFileSelector()
+  loadData("benchmark.js")
+}
+
+</script>
+</body>
+</html>
