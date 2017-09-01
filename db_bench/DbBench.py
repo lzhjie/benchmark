@@ -229,7 +229,7 @@ class DbBench:
 
     def test_delete(self):
         if self.conn.__class__.__dict__.get("delete"):
-            self.__test_func(self.conn.insert, "delete")
+            self.__test_func(self.conn.delete, "delete")
 
     def test_save(self):
         pass
