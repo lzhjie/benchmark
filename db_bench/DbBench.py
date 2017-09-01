@@ -355,7 +355,7 @@ def process_func(msg, context):
         if bar.check(bar_index, cur_index + 1):
             bar.print_bar(bar_index, cur_index + 1, "%d %s" % (bar_index + 1, theme))
             if cur_index == lastindex:
-                bar.reset(id)
+                bar.reset(bar_index)
 
     data_count = context["data_count"]
     data = context["data_class"](data_count, 10000 + id * data_count, options)
