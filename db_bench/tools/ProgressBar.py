@@ -104,18 +104,20 @@ class MultiBar:
     def append_bar(self, bar):
         if not isinstance(bar, ProgressBar):
             raise TypeError("require ProgressBar instance")
+        index = len(self.__bars)
         self.__bars.append(bar)
-        self.print_bar(len(self.__bars) - 1, 0)
+        self.print_bar(index, 0)
+        return index
 
-    def check(self, id, value):
-        bar = self.__bars[id]
+    def check(self, index, value):
+        bar = self.__bars[index]
         return bar.check(value)
 
-    def print_bar(self, id, value, title=None):
-        bar = self.__bars[id]
+    def print_bar(self, index, value, title=None):
+        bar = self.__bars[index]
         if bar.check(value) is True:
             buffer = bytearray()
-            self.__cursor_to_line(id, buffer)
+            self.__cursor_to_line(index, buffer)
             buffer.append(ord('\r'))
             temp = bar.bar_string(value, title)
             if bar.is_finished() and self.__color:
@@ -127,11 +129,11 @@ class MultiBar:
             return True
         return False
 
-    def reset(self, id=None):
+    def reset(self, index=None):
         if id is not None:
-            if id < 0 or id >= len(self.__bars):
+            if index < 0 or index >= len(self.__bars):
                 return
-            self.__bars[id].reset()
+            self.__bars[index].reset()
         else:
             self.__last_id = 0
             for bar in self.__bars:

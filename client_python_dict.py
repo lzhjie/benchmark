@@ -28,9 +28,6 @@ class PythonDict(DbConnection):
     def delete(self, record):
         return self.__client.pop(record.key(), None) is not None
 
-    def clear(self):
-        self.__client = {}
-
 
 def api_example():
     # see ssdb_lib/example.py

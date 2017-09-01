@@ -9,7 +9,7 @@ rm -fr $out_dir
 # exception, echo "-n",  print nothing, after $() -n lost
 params=$(echo $*|sed -e 's/-n\s*[0-9]*/ /g'|cut -d\  -f 4-)
 i=1
-end=$(echo $1 | cut -d, -f 2)
+end=$(echo $1 | awk -F, '{print $2}')
 if [[ $end > 0 ]] ; then
     i=$(echo $1 | cut -d, -f 1)
 else

@@ -45,6 +45,9 @@ class DbConnection(object):
     def delete(self, record):
         raise NotImplemented
 
+    def clear(self):
+        raise NotImplemented
+
     def __str__(self):
         return "%d %s[%s] %s:%s" % \
                (self.id, self.name, self.table, self.host, self.port)
@@ -348,14 +351,15 @@ def process_func(msg, context):
     options.set("_id", id)
 
     def progress_bar(theme, record, cur_index, context):
-        bar, id, lastindex = context
-        if bar.check(id, cur_index + 1):
-            bar.print_bar(id, cur_index + 1, "%d %s" % (id, theme))
+        bar, bar_index, lastindex = context
+        if bar.check(bar_index, cur_index + 1):
+            bar.print_bar(bar_index, cur_index + 1, "%d %s" % (bar_index + 1, theme))
             if cur_index == lastindex:
                 bar.reset(id)
 
     data_count = context["data_count"]
     data = context["data_class"](data_count, 10000 + id * data_count, options)
+    bar_index = id - 1
     lastindex = len(data) - 1
     conn_c = context["connection_class"]
     connection = conn_c(options)
@@ -363,7 +367,7 @@ def process_func(msg, context):
         db_bench = DbBench(connection, data)
     else:
         db_bench = DbBench(connection, data,
-                           hook_func=progress_bar, context=(multi_bar, id, lastindex))
+                           hook_func=progress_bar, context=(multi_bar, bar_index, lastindex))
         multi_bar.reset(id)
     db_bench.test_insert()
     db_bench.test_search()
@@ -392,6 +396,19 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
         print ("change record_num to %d" % record_num)
 
     count_per_processor = record_num / processor_num
+    if count_per_processor <= 0:
+        print("count_per_processor is 0")
+        return
+    options.set("_id", 0)
+
+    def clear():
+        if connection_class.__dict__.get("clear"):
+            print("clear...")
+            conn = connection_class(options)
+            conn.connect()
+            conn.clear()
+            conn.disconnect()
+    clear()
     quiet = options.get("quiet")
     if quiet:
         bar = None
@@ -409,13 +426,13 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
         "bar": bar,
         "lock": Lock(),
         "queue": queue,
-        "options": options
+        "options": copy.deepcopy(options)
     }
-
     pool = MultiProcess(processor_num, process_func, context, True)
     for i in range(processor_num):
-        pool.process_msg(i)
+        pool.process_msg(i+1)
     pool.join()
+    clear()
     result = {
         "stat": {},
         "detail": [],

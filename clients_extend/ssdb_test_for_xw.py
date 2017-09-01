@@ -28,9 +28,6 @@ class SsdbIS(DbConnection):
     # def delete(self, record):
     #     return self.__client.request(self.__coll + 'del', [str(record.key())]).ok()
 
-    def clear(self):
-        pass
-
 
 if __name__ == "__main__":
     options = list(Options.options)

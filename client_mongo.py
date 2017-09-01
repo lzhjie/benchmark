@@ -15,12 +15,8 @@ class PyMongo(DbConnection):
         self.__client = None
         self.__table = None
 
-    def __del__(self):
-        if self.__client is not None:
-            self.__client.drop_database(self.__coll)
-
     def disconnect(self):
-        pass
+        self.__client = None
 
     def connect(self):
         self.__client = MongoClient(self.host, self.port)
@@ -41,11 +37,8 @@ class PyMongo(DbConnection):
     def delete(self, record):
         return self.__table.delete_one({"key":record.key()}).deleted_count == 1
 
-
     def clear(self):
         self.__client.drop_database(self.__coll)
-        db = self.__client[self.__coll]
-        self.__table = db[self.__coll]
 
 
 def api_example():

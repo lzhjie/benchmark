@@ -44,12 +44,6 @@ class PyMongoIS(DbConnection):
     #     return self.__table.delete_one({"key":record.key()}).deleted_count == 1
 
 
-    def clear(self):
-        self.__client.drop_database(self.__coll)
-        db = self.__client[self.__coll]
-        self.__table = db[self.__coll]
-
-
 if __name__ == "__main__":
     options = list(Options.options)
     options.append(Option("file", "-f", "test.txt"))
