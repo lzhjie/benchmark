@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from imports import *
 from confluent_kafka import Consumer, TopicPartition
 from client_kafka import kafka_options

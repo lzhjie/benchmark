@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from pymongo import MongoClient, DESCENDING
 from db_bench.DbBench import DbConnection, multi_process_bench, Options
 

@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from db_bench.benchmarkjson2csv import json2csv
 from db_bench.csv2echartsjs import csv2js
 from db_bench.DbBench import Options

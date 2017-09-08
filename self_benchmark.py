@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 import os, shutil
 from db_bench.DbBench import DbConnection, multi_process_bench, Options, \
     Data, DataRandom, DataFile, DataRecord
@@ -40,6 +40,7 @@ class PythonDict(DbConnection):
 
     def insert(self, record):
         self.__dict[record.key()] = record.value()
+        return True
 
 
 if __name__ == "__main__":

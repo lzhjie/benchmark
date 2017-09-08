@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from imports import *
 from client_kafka import KafkaMsg, kafka_options
 from confluent_kafka import Producer
