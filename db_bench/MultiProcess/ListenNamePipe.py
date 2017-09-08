@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # named pipe Server
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # encoding: utf-8
 
 import os

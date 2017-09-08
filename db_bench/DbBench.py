@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 import datetime, random, os, sys, copy, json
 
 if sys.version.startswith("3"):
@@ -190,27 +190,25 @@ class DbBench:
         record = Record("null", "null")
         size = len(self.data)
         last_index = size - 1
-        index = 0
+
         __func_get_kv = self.data.hook_get_key_and_value
         __func_record_set_all = record.set_all
         __func_hook = self.__hook_func
         __context = self.__context
         watch = StopWatch()
         if __func_hook is not None:
-            while index < size:
+            for index in range(size):
                 k, v = __func_get_kv(index)
                 __func_record_set_all((k, v, index, index == last_index))
-                if func(record) is False:
+                if not func(record):
                     failed_counter += 1
                 __func_hook(theme, record, index, __context)
-                index += 1
         else:
-            while index < size:
+            for index in range(size):
                 k, v = __func_get_kv(index)
                 __func_record_set_all((k, v, index, index == last_index))
-                if func(record) is False:
+                if not func(record):
                     failed_counter += 1
-                index += 1
 
         cost = max(float("%.3f" % watch.seconds_float()), 0.001)
         stat["sum"] = size

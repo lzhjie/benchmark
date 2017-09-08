@@ -1,5 +1,5 @@
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # coding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from multiprocessing import cpu_count, Process, Queue
 import os, re, datetime, sys, signal
 
@@ -42,10 +42,6 @@ class MsgProcess(Process):
         self.__queue = Queue()
         self.__master_queue = master_queue
         self.__id = id
-
-    def __del__(self):
-        self.stop()
-        self.join()
 
     def id(self):
         return self.__id
