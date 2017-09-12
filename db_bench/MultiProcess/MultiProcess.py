@@ -48,7 +48,7 @@ class MsgProcess(Process):
 
     def put_msg(self, msg):
         self.__queue.put(msg, True)
-        #print "put ", msg, self.pid, self.__queue.empty()
+        # print "put ", msg, self.pid, self.__queue.empty()
 
     def start(self):
         if not self.__is_running:
@@ -67,7 +67,7 @@ class MsgProcess(Process):
         signal.signal(signal.SIGTERM, self.stop)
         while self.__is_running:
             msg = self.__queue.get(True)
-            #print os.getpid(), "get", msg
+            # print os.getpid(), "get", msg
             if msg == "\0":
                 self.__is_running = False
                 break;

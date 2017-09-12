@@ -37,7 +37,7 @@ class PyMongo(DbConnection):
     def delete(self, record):
         return self.__table.delete_one({"key":record.key()}).deleted_count == 1
 
-    def clear(self):
+    def tear_down(self):
         self.__client.drop_database(self.__coll)
 
 

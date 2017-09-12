@@ -27,9 +27,6 @@ class Ssdb(DbConnection):
     def delete(self, record):
         return self.__client.request(self.__coll+'del', [str(record.key())]).ok()
 
-    def clear(self):
-        pass
-
 
 def api_example():
     # see ssdb_lib/example.py

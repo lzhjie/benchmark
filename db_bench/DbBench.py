@@ -45,7 +45,12 @@ class DbConnection(object):
     def delete(self, record):
         raise NotImplemented
 
-    def clear(self):
+    def set_up(self):
+        """invoke before benchmark"""
+        raise NotImplemented
+
+    def tear_down(self):
+        """invoke after benchmark"""
         raise NotImplemented
 
     def __str__(self):
@@ -399,14 +404,16 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
         return
     options.set("_id", 0)
 
-    def clear():
-        if connection_class.__dict__.get("clear"):
-            print("clear...")
+    def clear(func):
+        hook = connection_class.__dict__.get(func, None)
+        if hook is not None:
+            print("%s..." % func)
             conn = connection_class(options)
             conn.connect()
-            conn.clear()
+            hook(conn)
             conn.disconnect()
-    clear()
+
+    clear("set_up")
     quiet = options.get("quiet")
     if quiet:
         bar = None
@@ -430,7 +437,7 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
     for i in range(processor_num):
         pool.process_msg(i+1)
     pool.join()
-    clear()
+    clear("tear_down")
     result = {
         "stat": {},
         "detail": [],

@@ -26,7 +26,7 @@ class StrictRedis(DbConnection):
     def delete(self, record):
         return self.__client.delete(record.key()) == True
 
-    def clear(self):
+    def tear_down(self):
         self.__client.flushdb()
 
 

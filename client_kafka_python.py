@@ -1,8 +1,8 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
-import datetime, os
+import datetime, os, sys
 from db_bench.DbBench import DbConnection, multi_process_bench, Options, Option, Data
-from confluent_kafka import Producer, Consumer, TopicPartition
+from kafka import KafkaProducer, KafkaConsumer, TopicPartition
 
 kafka_options = list(Options.options)
 kafka_options.append(Option("partition", "-P", 0))
@@ -27,9 +27,9 @@ class KafkaMsg(Data):
         return (self.key + str(index), self.lines[index % self.size])
 
 
-class ConfluentKafka(DbConnection):
+class KafkaPython(DbConnection):
     def __init__(self, options):
-        super(ConfluentKafka, self).__init__(options)
+        super(KafkaPython, self).__init__(options)
         self.__topic = self.table
         self.__partition = options.get("partition", 0)
         self.__producer = None
@@ -41,54 +41,60 @@ class ConfluentKafka(DbConnection):
             self.host += ":%d" % self.port
 
     def connect(self):
-        # 不稳定，第一次操作耗时长
-        self.__producer = Producer({'bootstrap.servers': self.host,
-                                    'socket.blocking.max.ms': 10})
-        self.__consumer = Consumer({'bootstrap.servers': self.host,
-                                    'socket.blocking.max.ms': 10,
-                                    'group.id': 'client_kafka_benchmark',
-                                    'default.topic.config': {'auto.offset.reset': 'largest'}
-                                    })
-        self.__consumer.subscribe([self.__topic])
+        self.__producer = KafkaProducer(bootstrap_servers=self.host)
+        self.__consumer = KafkaConsumer(bootstrap_servers=self.host,
+                                        group_id='client_kafka_benchmark',
+                                        consumer_timeout_ms=1000)
+        # self.__consumer.subscribe([self.__topic])
+        partition = TopicPartition(self.__topic, self.__partition)
+        self.__consumer.assign([partition])
+        self.__consumer.seek_to_end(partition)
+        # module bug, must request once at least, otherwise search fail
+        self.__consumer.position(partition)
 
     def set_up(self):
-        # consumer offset to end
-        while True:
-            msg = self.__consumer.poll()
-            if msg.error():
-                if self.quiet:
-                    print("start offset: %d" % (msg.offset()))
-                break
+        try:
+            for msg in self.__consumer:
+                pass
+                # print msg.value
+        except:
+            pass
 
     def disconnect(self):
         self.__producer = None
-        self.__consumer.close()
         self.__consumer = None
 
     def insert(self, record):
         try:
-            self.__producer.produce(self.__topic, record.value())
-            if record.is_tail():
-                self.__producer.flush()
+            self.__producer.send(self.__topic, record.value())
         except:
             self.__producer.flush()
-            self.__producer.produce(self.__topic, record.value())
+            self.__producer.send(self.__topic, record.value())
+        if record.is_tail():
+            self.__producer.flush()
         if self.__debug:
-            print("++" + record.value())
+            print("++ " + record.value())
         return True
 
     def search(self, record):
         if self.__consumer_interrupt:
             return False
-        msg = self.__consumer.poll()
-        if msg.error():
+        try:
+            msg = next(self.__consumer)
+        except:
+            print("timeout")
+            self.__consumer_interrupt = True
+            return False
+        if len(msg.value) == 0:
             if self.quiet:
-                print("msg.error, offset:" + str(msg.offset()))
+                print("msg.error, offset:" + str(msg.offset))
             self.__consumer_interrupt = True
             return False
         if self.__debug:
-            print("--%d %s" % (msg.offset(), msg.value()))
-        if record.value() != msg.value():
+            print("--%d %s" % (msg.offset, msg.value))
+        if record.value() != msg.value:
+            if not self.__debug:
+                print("--%d %s" % (msg.offset, msg.value))
             if self.quiet:
                 print("mismatch, mine:%s" % (record.value()))
             self.__consumer_interrupt = True
@@ -103,5 +109,5 @@ if __name__ == "__main__":
         exit(100)
     # option.set("processor_num", 1)
     print(option)
-    result = multi_process_bench(option, ConfluentKafka, KafkaMsg)
+    result = multi_process_bench(option, KafkaPython, KafkaMsg)
     # print result

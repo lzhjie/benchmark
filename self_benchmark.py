@@ -11,9 +11,6 @@ class EmptyConnection(DbConnection):
     def __init__(self,options):
         super(EmptyConnection, self).__init__(options)
 
-    def __del__(self):
-        pass
-
     def disconnect(self):
         pass
 
@@ -21,6 +18,9 @@ class EmptyConnection(DbConnection):
         pass
 
     def insert(self, record):
+        return True
+
+    def delete(self, record):
         return True
 
 
@@ -29,18 +29,24 @@ class PythonDict(DbConnection):
         super(PythonDict, self).__init__(options)
         self.__dict = None
 
-    def __del__(self):
-        pass
-
     def disconnect(self):
         self.__dict = None
 
     def connect(self):
         self.__dict = {}
 
+    def set_up(self):
+        pass
+
+    def tear_down(self):
+        pass
+
     def insert(self, record):
         self.__dict[record.key()] = record.value()
         return True
+
+    def delete(self, record):
+        return self.__dict.pop(record.key(), None) is not None
 
 
 if __name__ == "__main__":
