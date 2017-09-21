@@ -1,7 +1,7 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from multiprocessing import cpu_count, Process, Queue
-import os, re, datetime, sys, signal
+import os, re, datetime, sys
 
 
 class StopWatch:
@@ -64,19 +64,23 @@ class MsgProcess(Process):
         super(MsgProcess, self).join()
 
     def run(self):
-        signal.signal(signal.SIGTERM, self.stop)
+        __func_queue_get = self.__queue.get
+        __func_queue_is_empty = self.__queue.empty
+        __func_process_msg = self.__func
         while self.__is_running:
-            msg = self.__queue.get(True)
-            # print os.getpid(), "get", msg
+            msg = __func_queue_get(True)
             if msg == "\0":
                 self.__is_running = False
                 break;
             try:
-                self.__func(msg, self.__context)
+                __func_process_msg(msg, self.__context)
+            except (SystemExit, KeyboardInterrupt):
+                print("exit, pid %d" % os.getpid())
+                return
             except:
                 print(str(sys.exc_info()))
                 print("EXCEPTION message: " + str(msg))
-            if self.__queue.empty():
+            if __func_queue_is_empty():
                 self.__master_queue.put(self.id(), True)
 
 
@@ -97,15 +101,18 @@ class MsgProcessPool:
 
     def get_free_process(self, timeout):
         try:
+            # blocked when CTRL+c if timeout is None
             free_id = self.__q.get(True, timeout)
             return self.__pool[free_id]
+        except (SystemExit, KeyboardInterrupt), e:
+            raise e
         except:
             return None
 
     def process_msg(self, msg, timeout):
         process = self.get_free_process(timeout)
         if process is None:
-            print("timeout, msg: " + msg)
+            print("timeout, msg: " + str(msg))
             return False
         # 发送int(0) 失败， 只处理str类型
         process.put_msg(str(msg))
@@ -163,7 +170,7 @@ class MultiProcess:
     def cost(self):
         return self.__cost
 
-    def process_msg(self, msg, timeout=None):
+    def process_msg(self, msg, timeout=600):
         return self.__pool.process_msg(msg, timeout)
 
     @staticmethod

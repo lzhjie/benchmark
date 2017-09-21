@@ -2,7 +2,7 @@
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 import datetime, random, os, sys, copy, json
 
-if sys.version.startswith("3"):
+if sys.version_info.major == 3:
     from .tools.StopWatch import StopWatch
     from .tools.ProgressBar import ProgressBar, MultiBar
     from .tools.ColorPrint import ColorPrint
@@ -58,7 +58,6 @@ class DbConnection(object):
                (self.id, self.name, self.table, self.host, self.port)
 
 
-# 修改操作对性能影响较大（但优于重新创建），此处暂不做优化
 class Record(object):
     def __init__(self, key, value, id=0, is_tail=False):
         self.__record = (key, value, id, is_tail)
@@ -101,7 +100,6 @@ class Data(object):
     def hook_get_key_and_value(self, index):
         return (None, None)
 
-    # 迭代器未使用，性能优化
     def next(self):
         if self.__cursor >= self.__size:
             raise StopIteration()
@@ -165,6 +163,39 @@ class DataFile(DataRecord):
         return (self.key + str(index), self.lines[index % self.size])
 
 
+def benchmark(theme, data, watch, func, func_hook, context):
+    failed_counter = 0
+    data.reset()
+    record = Record("null", "null")
+    size = len(data)
+    last_index = size - 1
+    step = size / 10
+    next_level = step - 1
+
+    __func_get_kv = data.hook_get_key_and_value
+    __func_record_set_all = Record.set_all
+    __func_hook = func_hook
+    __context = context
+    watch.reset()
+    if __func_hook is not None:
+        for index in range(size):
+            k, v = __func_get_kv(index)
+            __func_record_set_all(record, (k, v, index, index == last_index))
+            if not func(record):
+                failed_counter += 1
+            if index >= next_level:
+                __func_hook(theme, record, index, __context)
+                next_level += step
+    else:
+        for index in range(size):
+            k, v = __func_get_kv(index)
+            __func_record_set_all(record, (k, v, index, index == last_index))
+            if not func(record):
+                failed_counter += 1
+    watch.stop()
+    return failed_counter
+
+
 class DbBench:
     def __init__(self, connection, data, hook_func=None, context=None):
         if not issubclass(type(connection), DbConnection):
@@ -188,34 +219,20 @@ class DbBench:
         return self.__result
 
     def __test_func(self, func, theme):
-        self.__result[theme] = {}
-        stat = self.__result[theme]
-        failed_counter = 0
-        self.data.reset()
-        record = Record("null", "null")
-        size = len(self.data)
-        last_index = size - 1
-
-        __func_get_kv = self.data.hook_get_key_and_value
-        __func_record_set_all = record.set_all
-        __func_hook = self.__hook_func
-        __context = self.__context
         watch = StopWatch()
-        if __func_hook is not None:
-            for index in range(size):
-                k, v = __func_get_kv(index)
-                __func_record_set_all((k, v, index, index == last_index))
-                if not func(record):
-                    failed_counter += 1
-                __func_hook(theme, record, index, __context)
-        else:
-            for index in range(size):
-                k, v = __func_get_kv(index)
-                __func_record_set_all((k, v, index, index == last_index))
-                if not func(record):
-                    failed_counter += 1
+        __benchmark = benchmark
+        m = sys.modules.get('db_bench.DbBench', None)
+        if m and m.__file__.endswith(".so") and DataRecord == self.data.__class__:
+            import importlib
+            temp = importlib.import_module("db_bench.DbBenchCython")
+            __benchmark = temp.benchmark_cython
+
+        failed_counter = __benchmark(theme, self.data, watch, func, self.__hook_func, self.__context)
 
         cost = max(float("%.3f" % watch.seconds_float()), 0.001)
+        self.__result[theme] = {}
+        stat = self.__result[theme]
+        size = len(self.data)
         stat["sum"] = size
         stat["cost"] = cost
         stat["qps"] = float("%.3f" % (size / cost))
@@ -366,17 +383,23 @@ def process_func(msg, context):
     lastindex = len(data) - 1
     conn_c = context["connection_class"]
     connection = conn_c(options)
-    if options.get("quiet") is True:
-        db_bench = DbBench(connection, data)
-    else:
-        db_bench = DbBench(connection, data,
-                           hook_func=progress_bar, context=(multi_bar, bar_index, lastindex))
-        multi_bar.reset(id)
-    db_bench.test_insert()
-    db_bench.test_search()
-    db_bench.test_update()
-    db_bench.test_delete()
-    context["queue"].put(db_bench.get_result(), True)
+    try:
+        if options.get("quiet") is True:
+            db_bench = DbBench(connection, data)
+        else:
+            db_bench = DbBench(connection, data,
+                               hook_func=progress_bar, context=(multi_bar, bar_index, lastindex))
+            multi_bar.reset(id)
+        db_bench.test_insert()
+        db_bench.test_search()
+        db_bench.test_update()
+        db_bench.test_delete()
+        context["queue"].put(db_bench.get_result(), True)
+    finally:
+        if db_bench:
+            del db_bench
+        del data
+        del connection
 
 
 def multi_process_bench(options, connection_class, data_class=DataRecord):
@@ -435,7 +458,7 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
     }
     pool = MultiProcess(processor_num, process_func, context, True)
     for i in range(processor_num):
-        pool.process_msg(i+1)
+        pool.process_msg(i + 1)
     pool.join()
     clear("tear_down")
     result = {
@@ -461,7 +484,7 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
                 target["sum"] += v["sum"]
                 target["cost"] = max(target["cost"], v["cost"])
     except:
-        raise  RuntimeError("benchmark lost, name: " + options.get("_name"))
+        raise RuntimeError("benchmark lost, name: " + options.get("_name"))
 
     if stat is not None:
         for k, v in stat.items():

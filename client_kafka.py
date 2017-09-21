@@ -47,11 +47,12 @@ class ConfluentKafka(DbConnection):
         self.__consumer = Consumer({'bootstrap.servers': self.host,
                                     'socket.blocking.max.ms': 10,
                                     'group.id': 'client_kafka_benchmark',
-                                    'default.topic.config': {'auto.offset.reset': 'largest'}
+                                    # 'default.topic.config': {'auto.offset.reset': 'largest'}
                                     })
         self.__consumer.subscribe([self.__topic])
+        self.__set_up()
 
-    def set_up(self):
+    def __set_up(self):
         # consumer offset to end
         while True:
             msg = self.__consumer.poll()
@@ -70,6 +71,8 @@ class ConfluentKafka(DbConnection):
             self.__producer.produce(self.__topic, record.value())
             if record.is_tail():
                 self.__producer.flush()
+        except (SystemExit, KeyboardInterrupt), e:
+            raise e
         except:
             self.__producer.flush()
             self.__producer.produce(self.__topic, record.value())

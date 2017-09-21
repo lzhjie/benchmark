@@ -52,7 +52,7 @@ class KafkaPython(DbConnection):
         # module bug, must request once at least, otherwise search fail
         self.__consumer.position(partition)
 
-    def set_up(self):
+    def __set_up(self):
         try:
             for msg in self.__consumer:
                 pass
@@ -67,6 +67,8 @@ class KafkaPython(DbConnection):
     def insert(self, record):
         try:
             self.__producer.send(self.__topic, record.value())
+        except (SystemExit, KeyboardInterrupt), e:
+            raise e
         except:
             self.__producer.flush()
             self.__producer.send(self.__topic, record.value())
@@ -81,6 +83,8 @@ class KafkaPython(DbConnection):
             return False
         try:
             msg = next(self.__consumer)
+        except (SystemExit, KeyboardInterrupt), e:
+            raise e
         except:
             print("timeout")
             self.__consumer_interrupt = True

@@ -64,21 +64,19 @@ if __name__ == "__main__":
     option.set("quiet", False)
     option.set("tag", "-q false DataRecord")
     multi_process_bench(option, EmptyConnection, DataRecord)
-    multi_process_bench(option, PythonDict, DataRecord)
-    option.set("tag", "-q false DataRandom")
-    multi_process_bench(option, EmptyConnection, DataRandom)
-
     option.set("quiet", True)
     option.set("tag", "-q true DataRecord")
     multi_process_bench(option, EmptyConnection, DataRecord)
+    option.set("tag", "-q true Data")
+    multi_process_bench(option, EmptyConnection, Data)
+    option.set("tag", "-q true DataRecord")
     multi_process_bench(option, PythonDict, DataRecord)
     option.set("tag", "-q true DataRandom")
     multi_process_bench(option, EmptyConnection, DataRandom)
-    option.set("tag", "-q true Data")
-    multi_process_bench(option, EmptyConnection, Data)
     option.set("tag", "-q true DataFile")
     option.set("file", __file__)
     multi_process_bench(option, EmptyConnection, DataFile)
+
 
     file_name = json2csv(out_dir)
     with open(file_name) as fp:
