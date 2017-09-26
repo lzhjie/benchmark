@@ -19,13 +19,16 @@ class Ssdb(DbConnection):
         self.__client.close()
 
     def insert(self, record):
-        return self.__client.request(self.__coll+'set', [str(record.key()), record.value()]).ok()
+        k, v = record[0]
+        return self.__client.request(self.__coll+'set', [str(k), str(v)]).ok()
 
     def search(self, record):
-        return self.__client.request(self.__coll+'get', [str(record.key())]).ok()
+        k, v = record[0]
+        return self.__client.request(self.__coll+'get', [str(k)]).data == str(v)
 
     def delete(self, record):
-        return self.__client.request(self.__coll+'del', [str(record.key())]).ok()
+        k, v = record[0]
+        return self.__client.request(self.__coll+'del', [str(k)]).ok()
 
 
 def api_example():

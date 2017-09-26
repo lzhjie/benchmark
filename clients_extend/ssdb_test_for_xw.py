@@ -20,13 +20,17 @@ class SsdbIS(DbConnection):
         self.__client.close()
 
     def insert(self, record):
-        return self.__client.request(self.__coll + 'set', [str(record.key()), record.value()]).ok()
+        k, v = record[0]
+        return self.__client.request(self.__coll + 'set', [str(k), str(v)]).ok()
 
     # def search(self, record):
     #    return self.__client.request(self.__coll + 'get', [str(record.key())]).ok()
 
     # def delete(self, record):
     #     return self.__client.request(self.__coll + 'del', [str(record.key())]).ok()
+
+    def _warm_up(self, record):
+        pass
 
 
 if __name__ == "__main__":

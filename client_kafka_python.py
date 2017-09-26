@@ -65,26 +65,30 @@ class KafkaPython(DbConnection):
         self.__consumer = None
 
     def insert(self, record):
+        (k, v), index, last_index = record
+        v = str(v)
         try:
-            self.__producer.send(self.__topic, record.value())
-        except (SystemExit, KeyboardInterrupt), e:
-            raise e
+            self.__producer.send(self.__topic, v)
+        except (SystemExit, KeyboardInterrupt):
+            raise SystemExit()
         except:
             self.__producer.flush()
-            self.__producer.send(self.__topic, record.value())
-        if record.is_tail():
+            self.__producer.send(self.__topic, v)
+        if index == last_index:
             self.__producer.flush()
         if self.__debug:
-            print("++ " + record.value())
+            print("++ " + v)
         return True
 
     def search(self, record):
+        k, v = record[0]
+        v = str(v)
         if self.__consumer_interrupt:
             return False
         try:
             msg = next(self.__consumer)
-        except (SystemExit, KeyboardInterrupt), e:
-            raise e
+        except (SystemExit, KeyboardInterrupt):
+            raise SystemExit()
         except:
             print("timeout")
             self.__consumer_interrupt = True
@@ -96,11 +100,11 @@ class KafkaPython(DbConnection):
             return False
         if self.__debug:
             print("--%d %s" % (msg.offset, msg.value))
-        if record.value() != msg.value:
+        if v != msg.value:
             if not self.__debug:
                 print("--%d %s" % (msg.offset, msg.value))
             if self.quiet:
-                print("mismatch, mine:%s" % (record.value()))
+                print("mismatch, mine:%s" % (v))
             self.__consumer_interrupt = True
             return False
         return True

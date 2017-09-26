@@ -104,8 +104,8 @@ class MsgProcessPool:
             # blocked when CTRL+c if timeout is None
             free_id = self.__q.get(True, timeout)
             return self.__pool[free_id]
-        except (SystemExit, KeyboardInterrupt), e:
-            raise e
+        except (SystemExit, KeyboardInterrupt):
+            raise SystemExit()
         except:
             return None
 

@@ -5,7 +5,8 @@ from db_bench.DbBench import DbConnection, multi_process_bench, Options
 
 
 def record2dict(record):
-    return {'key': record.key(), 'value': record.value()}
+    k, v = record[0]
+    return {'key': k, 'value': v}
 
 
 class PyMongo(DbConnection):
@@ -28,14 +29,17 @@ class PyMongo(DbConnection):
         return self.__table.insert(record2dict(record)) is not None
 
     def search(self, record):
-        return self.__table.find_one({"key":record.key()}) is not None
+        k, v = record[0]
+        return self.__table.find_one({"key":k})["value"] == v
 
     def update(self, record):
-        return self.__table.update({"key":record.key()},
-                                   {"$set":{"value":record.value()}})["updatedExisting"]
+        k, v = record[0]
+        return self.__table.update({"key":k},
+                                   {"$set":{"value":v}})["updatedExisting"]
 
     def delete(self, record):
-        return self.__table.delete_one({"key":record.key()}).deleted_count == 1
+        k, v = record[0]
+        return self.__table.delete_one({"key":k}).deleted_count == 1
 
     def tear_down(self):
         self.__client.drop_database(self.__coll)

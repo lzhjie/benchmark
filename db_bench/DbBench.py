@@ -53,6 +53,10 @@ class DbConnection(object):
         """invoke after benchmark"""
         raise NotImplemented
 
+    def _warm_up(self, record):
+        (k, v), index, last_index = record
+        return True
+
     def __str__(self):
         return "%d %s[%s] %s:%s" % \
                (self.id, self.name, self.table, self.host, self.port)
@@ -166,21 +170,19 @@ class DataFile(DataRecord):
 def benchmark(theme, data, watch, func, func_hook, context):
     failed_counter = 0
     data.reset()
-    record = Record("null", "null")
     size = len(data)
     last_index = size - 1
     step = size / 10
     next_level = step - 1
 
     __func_get_kv = data.hook_get_key_and_value
-    __func_record_set_all = Record.set_all
     __func_hook = func_hook
     __context = context
     watch.reset()
     if __func_hook is not None:
         for index in range(size):
-            k, v = __func_get_kv(index)
-            __func_record_set_all(record, (k, v, index, index == last_index))
+            kv = __func_get_kv(index)
+            record = (kv, index, last_index)
             if not func(record):
                 failed_counter += 1
             if index >= next_level:
@@ -188,9 +190,8 @@ def benchmark(theme, data, watch, func, func_hook, context):
                 next_level += step
     else:
         for index in range(size):
-            k, v = __func_get_kv(index)
-            __func_record_set_all(record, (k, v, index, index == last_index))
-            if not func(record):
+            kv = __func_get_kv(index)
+            if not func((kv, index, last_index)):
                 failed_counter += 1
     watch.stop()
     return failed_counter
@@ -210,6 +211,7 @@ class DbBench:
         self.__hook_func = hook_func
         self.__result = {}
         self.__context = context
+        self.__warm_up = False
 
     def __del__(self):
         if self.__connected:
@@ -226,6 +228,11 @@ class DbBench:
             import importlib
             temp = importlib.import_module("db_bench.DbBenchCython")
             __benchmark = temp.benchmark_cython
+
+        # warm up
+        if self.__warm_up is False:
+            self.__warm_up = True
+            __benchmark("warmup", self.data, watch, self.conn._warm_up, self.__hook_func, self.__context)
 
         failed_counter = __benchmark(theme, self.data, watch, func, self.__hook_func, self.__context)
 
@@ -253,9 +260,6 @@ class DbBench:
     def test_delete(self):
         if self.conn.__class__.__dict__.get("delete"):
             self.__test_func(self.conn.delete, "delete")
-
-    def test_save(self):
-        pass
 
 
 def string2bool(s):
@@ -311,6 +315,7 @@ class Options:
         Option("out_dir", "-d", "result"),
         Option("tag", "-t", "tag"),
         Option("table", "-T", "__benchmark"),
+        Option("key_start", "-k", 10000),
         Option("quiet", "-q", False, string2bool))
 
     def __init__(self, options=None):
@@ -378,7 +383,8 @@ def process_func(msg, context):
                 bar.reset(bar_index)
 
     data_count = context["data_count"]
-    data = context["data_class"](data_count, 10000 + id * data_count, options)
+    key_start = options.get("key_start")
+    data = context["data_class"](data_count, key_start + id * data_count, options)
     bar_index = id - 1
     lastindex = len(data) - 1
     conn_c = context["connection_class"]

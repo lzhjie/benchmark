@@ -67,20 +67,24 @@ class ConfluentKafka(DbConnection):
         self.__consumer = None
 
     def insert(self, record):
+        (k, v), index, last_index = record
+        v = str(v)
         try:
-            self.__producer.produce(self.__topic, record.value())
-            if record.is_tail():
+            self.__producer.produce(self.__topic, v)
+            if index == last_index:
                 self.__producer.flush()
-        except (SystemExit, KeyboardInterrupt), e:
-            raise e
+        except (SystemExit, KeyboardInterrupt):
+            raise SystemExit()
         except:
             self.__producer.flush()
-            self.__producer.produce(self.__topic, record.value())
+            self.__producer.produce(self.__topic, v)
         if self.__debug:
-            print("++" + record.value())
+            print("++" + v)
         return True
 
     def search(self, record):
+        k, v = record[0]
+        v = str(v)
         if self.__consumer_interrupt:
             return False
         msg = self.__consumer.poll()
@@ -90,10 +94,10 @@ class ConfluentKafka(DbConnection):
             self.__consumer_interrupt = True
             return False
         if self.__debug:
-            print("--%d %s" % (msg.offset(), msg.value()))
-        if record.value() != msg.value():
+            print("--%d %s" % (msg.offset(), v))
+        if v != msg.value():
             if self.quiet:
-                print("mismatch, mine:%s" % (record.value()))
+                print("mismatch, mine:%s" % (v))
             self.__consumer_interrupt = True
             return False
         return True

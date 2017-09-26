@@ -16,17 +16,20 @@ class PythonDict(DbConnection):
         self.__client = None
 
     def insert(self, record):
-        self.__client[record.key()] = record.value()
+        k, v = record[0]
+        self.__client[k] = v
         return True
 
     def search(self, record):
-        return self.__client.get(record.key(), None) is not None
+        k, v = record[0]
+        return self.__client.get(k, None) == v
 
     def update(self, record):
         return self.insert(record)
 
     def delete(self, record):
-        return self.__client.pop(record.key(), None) is not None
+        k, v = record[0]
+        return self.__client.pop(k, None) is not None
 
 
 def api_example():

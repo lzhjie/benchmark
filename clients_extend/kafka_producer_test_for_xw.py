@@ -23,13 +23,17 @@ class KafkaProducer(DbConnection):
         self.__producer = None
 
     def insert(self, record):
+        k, v = record[0]
         try:
-            self.__producer.produce(self.__topic, record.value())
+            self.__producer.produce(self.__topic, str(v))
         except:
             self.__producer.flush()
         if record.is_tail():
             self.__producer.flush()
         return True
+
+    def _warm_up(self, record):
+        pass
 
 
 if __name__ == "__main__":

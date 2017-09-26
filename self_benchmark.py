@@ -18,10 +18,10 @@ class EmptyConnection(DbConnection):
         pass
 
     def insert(self, record):
-        return True
+        return self._warm_up(record)
 
     def delete(self, record):
-        return True
+        return self._warm_up(record)
 
 
 class PythonDict(DbConnection):
@@ -42,11 +42,17 @@ class PythonDict(DbConnection):
         pass
 
     def insert(self, record):
-        self.__dict[record.key()] = record.value()
+        k,v = record[0]
+        self.__dict[k] = v
         return True
 
+    def search(self, record):
+        k,v = record[0]
+        return self.__dict[k] == v
+
     def delete(self, record):
-        return self.__dict.pop(record.key(), None) is not None
+        k, v = record[0]
+        return self.__dict.pop(k, None) is not None
 
 
 if __name__ == "__main__":

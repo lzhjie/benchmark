@@ -28,13 +28,17 @@ class KafkaConsumer(DbConnection):
         self.__consumer.close()
 
     def search(self, record):
+        (k,v), index, last_index = record
         msg = self.__consumer.poll(5)
         if msg is None:
-            raise RuntimeError("offset: " + str(self.__offset + record.id()))
+            raise RuntimeError("offset: " + str(self.__offset + index))
             return False
         if self.__debug:
             print("--%d %s"%(msg.offset(), msg.value()))
         return True
+
+    def _warm_up(self, record):
+        pass
 
 
 if __name__ == "__main__":

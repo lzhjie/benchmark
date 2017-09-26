@@ -18,13 +18,16 @@ class StrictRedis(DbConnection):
         self.__client = None
 
     def insert(self, record):
-        return self.__client.set(record.key(), record.value(), nx=True) == True
+        k, v = record[0]
+        return self.__client.set(str(k), str(v), nx=True) == True
 
     def search(self, record):
-        return self.__client.get(record.key()) == record.value()
+        k, v = record[0]
+        return self.__client.get(str(k)) == str(v)
 
     def delete(self, record):
-        return self.__client.delete(record.key()) == True
+        k, v = record[0]
+        return self.__client.delete(str(k)) == True
 
     def tear_down(self):
         self.__client.flushdb()

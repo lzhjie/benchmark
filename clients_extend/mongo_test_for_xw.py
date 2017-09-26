@@ -7,7 +7,8 @@ from imports import *
 
 
 def record2dict(record):
-    return {'key': record.key(), 'value': record.value()}
+    k, v = record[0]
+    return {'key': k, 'value': v}
 
 
 class PyMongoIS(DbConnection):
@@ -34,7 +35,8 @@ class PyMongoIS(DbConnection):
         return self.__table.insert(record2dict(record)) is not None
 
     def search(self, record):
-        return self.__table.find_one({"key":record.key()}) is not None
+        k, v = record[0]
+        return self.__table.find_one({"key": k}) == v
 
     # def update(self, record):
     #     return self.__table.update({"key":record.key()},
@@ -42,6 +44,9 @@ class PyMongoIS(DbConnection):
 
     # def delete(self, record):
     #     return self.__table.delete_one({"key":record.key()}).deleted_count == 1
+
+    def _warm_up(self, record):
+        pass
 
 
 if __name__ == "__main__":
