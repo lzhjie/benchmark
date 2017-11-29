@@ -1,36 +1,9 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
+
 from multiprocessing import cpu_count, Process, Queue
-import os, re, datetime, sys
-
-
-class StopWatch:
-    def __init__(self):
-        self.__start = datetime.datetime.now()
-
-    def time(self):
-        return str(datetime.datetime.now() - self.__start)
-
-    def reset(self):
-        self.__start = datetime.datetime.now()
-
-
-def find_files(dir, pattarn, recursion=False):
-    result = []
-    patt = re.compile(pattarn)
-    for root, subdirs, files in os.walk(dir):
-        for name in files:
-            if patt.match(name) is not None:
-                full_name = os.path.join(root, name)
-                result.append(full_name)
-        if not recursion:
-            break
-    return result
-
-
-def file_size(filename):
-    size = os.path.getsize(filename)
-    return "%.2fM" % (size / 1024 / 1024)
+import os
+import traceback
 
 
 class MsgProcess(Process):
@@ -58,18 +31,18 @@ class MsgProcess(Process):
     def stop(self):
         if self.__is_running:
             self.__is_running = False
-            self.put_msg("\0")
+            self.put_msg(None)
 
     def join(self):
         super(MsgProcess, self).join()
 
     def run(self):
         __func_queue_get = self.__queue.get
-        __func_queue_is_empty = self.__queue.empty
         __func_process_msg = self.__func
         while self.__is_running:
+            self.__master_queue.put(self.id(), True)
             msg = __func_queue_get(True)
-            if msg == "\0":
+            if msg is None:
                 self.__is_running = False
                 break;
             try:
@@ -78,14 +51,12 @@ class MsgProcess(Process):
                 print("exit, pid %d" % os.getpid())
                 return
             except:
-                print(str(sys.exc_info()))
+                traceback.print_exc()
                 print("EXCEPTION message: " + str(msg))
-            if __func_queue_is_empty():
-                self.__master_queue.put(self.id(), True)
 
 
 class MsgProcessPool:
-    def __init__(self, num, func, context, force=False):
+    def __init__(self, num, func, context, force=False, buffer_size=0):
         if num > cpu_count() and force is False:
             num = cpu_count()
             print("change num to " + str(num))
@@ -93,8 +64,9 @@ class MsgProcessPool:
         self.__seq = 0
         self.__q = Queue()
         self.__pool = [MsgProcess(self.__q, i, func, context) for i in range(num)]
-        for x in self.__pool:
-            self.__q.put(x.id())
+        for i in range(buffer_size):
+            for x in self.__pool:
+                self.__q.put(x.id())
 
     def __del__(self):
         self.stop()
@@ -114,8 +86,7 @@ class MsgProcessPool:
         if process is None:
             print("timeout, msg: " + str(msg))
             return False
-        # 发送int(0) 失败， 只处理str类型
-        process.put_msg(str(msg))
+        process.put_msg(msg)
         return True
 
     def start(self):
@@ -134,30 +105,9 @@ class MsgProcessPool:
         return len(self.__pool)
 
 
-class FileInfo:
-    def __init__(self, name, id):
-        self.__name = name
-        self.__id = id
-        size = float(os.path.getsize(name))
-        self.__str = "(%s) %s %.3fM" % (self.__id, self.__name, size / 1024 / 1024)
-
-    @property
-    def name(self):
-        return self.__name
-
-    @property
-    def id(self):
-        return self.__id
-
-    def __str__(self):
-        return self.__str
-
-
 class MultiProcess:
-    def __init__(self, process_num, func, context=None, force=False):
-        self.__pool = MsgProcessPool(process_num, func, context, force)
-        self.__cost = "--"
-        self.__watch = StopWatch()
+    def __init__(self, process_num, func, context=None, force=False, buffer_size=1):
+        self.__pool = MsgProcessPool(process_num, func, context, force, buffer_size)
         self.__pool.start()
 
     def __del__(self):
@@ -165,10 +115,6 @@ class MultiProcess:
 
     def join(self):
         self.__pool.stop()
-        self.__cost = self.__watch.time()
-
-    def cost(self):
-        return self.__cost
 
     def process_msg(self, msg, timeout=600):
         return self.__pool.process_msg(msg, timeout)
@@ -196,7 +142,7 @@ def example():
     for i in range(10):
         process.process_msg(i)
     process.join()
-    print("cost: ", process.cost())
+    print("finish")
 
 
 if __name__ == "__main__":

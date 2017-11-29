@@ -35,7 +35,7 @@ class SsdbIS(DbConnection):
 
 if __name__ == "__main__":
     options = list(Options.options)
-    options.append(Option("file", "-f", "test.txt"))
+    options.append(Option("file", "f", "test.txt"))
     option = Options(options)
     option.set("port", 8888)
     option.set("table", "")

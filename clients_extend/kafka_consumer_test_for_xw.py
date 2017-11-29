@@ -42,7 +42,7 @@ class KafkaConsumer(DbConnection):
 
 
 if __name__ == "__main__":
-    kafka_options.append(Option("offset", "-O", 0))
+    kafka_options.append(Option("offset", "O", 0))
     option = Options(kafka_options)
     option.set("port", 9092)
     option.set("processor_num", 1)

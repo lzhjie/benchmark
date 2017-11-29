@@ -5,9 +5,9 @@ from db_bench.DbBench import DbConnection, multi_process_bench, Options, Option,
 from confluent_kafka import Producer, Consumer, TopicPartition
 
 kafka_options = list(Options.options)
-kafka_options.append(Option("partition", "-P", 0))
-kafka_options.append(Option("file", "-f", ".".join(os.path.abspath(__file__).split(".")[:-1]) + ".py"))
-kafka_options.append(Option("length", "-l", 0))
+kafka_options.append(Option("partition", "P", 0))
+kafka_options.append(Option("file", "f", ".".join(os.path.abspath(__file__).split(".")[:-1]) + ".py"))
+kafka_options.append(Option("length", "l", 0))
 
 
 class KafkaMsg(Data):

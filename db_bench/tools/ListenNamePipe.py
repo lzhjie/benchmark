@@ -1,6 +1,5 @@
-# named pipe Server
-# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 # encoding: utf-8
+# Copyright (C) zhongjie luo <l.zhjie@qq.com>
 
 import os
 import select
@@ -11,7 +10,7 @@ class ListenNamedPipe:
         try:
             os.mkfifo(name)
         except OSError as e:
-            print "mkfifo error:", e
+            print("mkfifo error:", e)
             raise e
         self.__name = name
         self.__func = func
@@ -33,7 +32,7 @@ class ListenNamedPipe:
             if not epoll_list:
                 continue
             if epoll_list[0][1] & select.EPOLLERR:
-                print "EPOLLERR ", self.__name
+                print("EPOLLERR ", self.__name)
                 return
             s = rf.read()
             if self.__func(s, self.__context) is False:
@@ -42,3 +41,6 @@ class ListenNamedPipe:
     def stop(self):
         if self.__running:
             self.__running = False
+
+    def __call__(self, *args, **kwargs):
+        self.listen()

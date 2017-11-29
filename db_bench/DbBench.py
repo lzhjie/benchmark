@@ -6,14 +6,44 @@ if sys.version_info.major == 3:
     from .tools.StopWatch import StopWatch
     from .tools.ProgressBar import ProgressBar, MultiBar
     from .tools.ColorPrint import ColorPrint
-    from .MultiProcess.MultiProcess import MultiProcess
+    from .tools.MultiProcess import MultiProcess
+    from .tools.Options import Options as toolsOptions, Option, string2bool
 else:
     from tools.StopWatch import StopWatch
     from tools.ProgressBar import ProgressBar, MultiBar
     from tools.ColorPrint import ColorPrint
-    from MultiProcess.MultiProcess import MultiProcess
+    from tools.MultiProcess import MultiProcess
+    from tools.Options import Options as toolsOptions, Option, string2bool
 
 from multiprocessing import Lock, Queue
+
+
+class Options(toolsOptions):
+    options = (
+        Option("host", "h", "127.0.0.1"),
+        Option("port", "p", 0),
+        Option("processor_num", "n", 1),
+        Option("record_num", "r", 1000),
+        Option("processor_num_max", "n_max", 50),
+        Option("record_num_max", "r_max", 10000000),
+        Option("out_dir", "d", "result"),
+        Option("tag", "t", "tag",
+               help=u"添加到输出文件名中，可用于区分同类型测试\r\n" \
+                    u"例如用时间来命名每次测试结果的输出文件\r\n"),
+        Option("table", "T", "__benchmark"),
+        Option("key_start", "k", 10000),
+        Option("quiet", "q", False, string2bool))
+
+    def __init__(self, options=None, args=None):
+        if options is None:
+            options = Options.options
+        super(Options, self).__init__(options, args)
+
+    def parse_option(self, raise_when_fail=False):
+        if super(Options, self).parse_option(raise_when_fail) is False:
+            print(self.usage() + self.help())
+            return False
+        return True
 
 
 class DbConnection(object):
@@ -262,113 +292,6 @@ class DbBench:
             self.__test_func(self.conn.delete, "delete")
 
 
-def string2bool(s):
-    return s.lower() == "true"
-
-
-def string2int(s):
-    return int(s)
-
-
-def string2string(s):
-    return str(s)
-
-
-class Option:
-    def __init__(self, name, tag, default, conv=None, help=None):
-        if conv is None:
-            if type(default) == type(""):
-                conv = string2string
-            else:
-                conv = string2int
-        self.__info = (name, tag, default, conv, help)
-
-    @property
-    def name(self):
-        return self.__info[0]
-
-    @property
-    def tag(self):
-        return self.__info[1]
-
-    @property
-    def default(self):
-        return self.__info[2]
-
-    @property
-    def conv(self):
-        return self.__info[3]
-
-    @property
-    def help(self):
-        return self.__info[4]
-
-
-class Options:
-    options = (
-        Option("host", "-h", "127.0.0.1"),
-        Option("port", "-p", 0),
-        Option("processor_num", "-n", 1),
-        Option("record_num", "-r", 1000),
-        Option("processor_num_max", "-n_max", 50),
-        Option("record_num_max", "-r_max", 10000000),
-        Option("out_dir", "-d", "result"),
-        Option("tag", "-t", "tag"),
-        Option("table", "-T", "__benchmark"),
-        Option("key_start", "-k", 10000),
-        Option("quiet", "-q", False, string2bool))
-
-    def __init__(self, options=None):
-        if options is None:
-            options = Options.options
-        self.options = options
-        self.__options = {item.tag: item for item in options}
-        assert len(self.__options) == len(options)
-        self.__values = {}
-
-    def parse_option(self):
-        i = 1
-        while i < len(sys.argv):
-            option = self.__options.get(sys.argv[i])
-            if option is not None:
-                i += 1
-                if i >= len(sys.argv):
-                    print(self.__usage(sys.argv[0]))
-                    return False
-                self.__values[option.name] = option.conv(sys.argv[i])
-            else:
-                print(self.__usage(sys.argv[0]))
-                return False
-            i += 1
-        return True
-
-    def __usage(self, name):
-        temp = "python " + name
-        for option in self.options:
-            temp += " [%s %s]" % (option.tag, option.name)
-        return temp
-
-    def set(self, name, value):
-        self.__values[name] = value
-
-    def get(self, name, default=None):
-        value = self.__values.get(name)
-        if value is not None:
-            return value
-        if default:
-            return default
-        for option in self.__options.values():
-            if option.name == name:
-                return option.default
-        return None
-
-    def __str__(self):
-        temp = ""
-        for option in self.options:
-            temp += " %s: %s\r\n" % (option.name, str(self.get(option.name)))
-        return temp
-
-
 def process_func(msg, context):
     id = int(msg)
     multi_bar = context["bar"]
@@ -525,12 +448,15 @@ class ConnectionExample(DbConnection):
 
     def insert(self, record):
         self.sleep(0.01)
-        self.__client[record.key()] = record.value()
+        k, v = record[:2]
+        self.__client[k] = v
         return True
 
     def search(self, record):
         self.sleep(0.01)
-        return self.__client.get(record.key()) is not None
+        k, v = record[:2]
+        self.__client[k] = v
+        return self.__client.get(k) == v
 
     def update(self, record):
         self.sleep(0.01)
@@ -538,7 +464,8 @@ class ConnectionExample(DbConnection):
 
     def delete(self, record):
         self.sleep(0.01)
-        return self.__client.pop(record.key(), None) is not None
+        k, v = record[:2]
+        return self.__client.pop(k, None) is not None
 
     def clear(self):
         self.__client = {}

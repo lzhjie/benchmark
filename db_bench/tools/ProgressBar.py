@@ -20,33 +20,32 @@ class ProgressBar:
         if self.__interval_value <= 0:
             self.__interval_value = 1
         self.__max_value = max_value
-        self.__next_print_value = self.__interval_value
+        self.__next_print_value = 0
         self.__c = ord(char)
         self.__watch = StopWatch()
         self.__interval_sec = interval_sec
-        self.__next_print_sec = self.__interval_sec
+        self.__next_print_sec = 0.0
         self.__counter = 0
         self.__title = title
         self.__is_finished = False
 
     def reset(self):
         self.__is_finished = False
-        self.__next_print_value = self.__interval_value
-        self.__next_print_sec = self.__interval_sec
+        self.__next_print_value = 0
+        self.__next_print_sec = 0
         self.__counter = 0
         self.__watch.reset()
 
     def check(self, cur_value):
         """invoke print if return True"""
-        if cur_value == 0:
-            return True
         if cur_value < self.__next_print_value:
             return False
-        if self.__is_finished:
-            return False
-        if cur_value >= self.__max_value:
-            return True
-        if self.__watch.seconds_float() < self.__next_print_sec:
+        else:
+            if self.__is_finished:
+                return False
+            if cur_value >= self.__max_value:
+                return True
+        if self.__next_print_sec > 0 and self.__watch.seconds_float() < self.__next_print_sec:
             self.__to_next_state(cur_value, False)
             return False
         return True
@@ -81,7 +80,7 @@ class ProgressBar:
         if title is None:
             title = self.__title
         bar = "%s [%s] %d%% %ss                   " % \
-              (title, b_str.decode(), pos * 100 / 100, cost)
+              (title, b_str.decode(), pos, cost)
         return bar
 
     def is_finished(self):
