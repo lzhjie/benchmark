@@ -64,14 +64,16 @@ class MsgProcessPool:
         self.__seq = 0
         self.__q = Queue()
         self.__pool = [MsgProcess(self.__q, i, func, context) for i in range(num)]
-        for i in range(buffer_size):
-            for x in self.__pool:
-                self.__q.put(x.id())
+        # multiprocessing.Queue is not FIFO, use list instead when start
+        self.__free_ids = [x.id() for x in self.__pool]
+        self.__free_ids.reverse()
 
     def __del__(self):
         self.stop()
 
     def get_free_process(self, timeout):
+        if len(self.__free_ids):
+            return self.__pool[self.__free_ids.pop()]
         try:
             # blocked when CTRL+c if timeout is None
             free_id = self.__q.get(True, timeout)

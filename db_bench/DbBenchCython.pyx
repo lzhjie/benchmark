@@ -22,7 +22,7 @@ cpdef benchmark_cython(theme, data, watch, func, func_hook, context):
     cdef long last_index = size - 1
     cdef long key = data.range_l
     cdef long step = size/10
-    cdef long next_level = step - 1
+    cdef long next_level = 0
 
     if func_hook is None:
         next_level = size

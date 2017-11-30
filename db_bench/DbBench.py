@@ -15,7 +15,7 @@ else:
     from tools.MultiProcess import MultiProcess
     from tools.Options import Options as toolsOptions, Option, string2bool
 
-from multiprocessing import Lock, Queue
+from multiprocessing import Lock, Queue, Semaphore
 
 
 class Options(toolsOptions):
@@ -204,7 +204,7 @@ def benchmark(theme, data, watch, func, func_hook, context):
     size = len(data)
     last_index = size - 1
     step = size / 10
-    next_level = step - 1
+    next_level = 0
 
     __func_get_kv = data.hook_get_key_and_value
     __func_hook = func_hook
@@ -309,10 +309,12 @@ def process_func(msg, context):
             if cur_index == last_index:
                 bar.reset(bar_index)
 
-    data_count = context["_data_count"]
+    data_count = context["data_count"]
     key_start = options.get("key_start")
     data = context["data_class"](data_count, key_start + id * data_count, options)
     bar_index = id - 1
+    semaphore = context["semaphore"]
+    queue_startline = context["queue_startline"]
     conn_c = context["connection_class"]
     connection = conn_c(options)
     try:
@@ -322,6 +324,8 @@ def process_func(msg, context):
             db_bench = DbBench(connection, data,
                                hook_func=progress_bar, context=(multi_bar, bar_index))
             multi_bar.reset(id)
+        queue_startline.put(id)
+        semaphore.acquire()
         db_bench.test_insert()
         db_bench.test_search()
         db_bench.test_update()
@@ -377,20 +381,30 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
         for i in range(processor_num):
             bar.append_bar(ProgressBar(count_per_processor, "processor " + str(i)))
     queue = Queue()
+    semaphore = Semaphore(processor_num)
     options.set("_name", connection_class.__dict__.get("name", connection_class.__name__))
     options.set("_count_per_processor", count_per_processor)
+    queue_startline = Queue()
     context = {
         "data_class": data_class,
         "connection_class": connection_class,
-        "_data_count": count_per_processor,
+        "data_count": count_per_processor,
         "bar": bar,
         "lock": Lock(),
         "queue": queue,
+        "queue_startline": queue_startline,
+        "semaphore": semaphore,
         "options": copy.deepcopy(options)
     }
     pool = MultiProcess(processor_num, process_func, context, True)
     for i in range(processor_num):
+        semaphore.acquire()
+    for i in range(processor_num):
         pool.process_msg(i + 1)
+    for i in range(processor_num):
+        queue_startline.get()
+    for i in range(processor_num):
+        semaphore.release()
     pool.join()
     clear("tear_down")
     result = {
@@ -468,8 +482,8 @@ class ConnectionExample(DbConnection):
 
 def example():
     option = Options()
-    option.set("record_num", 3003)
-    option.set("processor_num", 3)
+    option.set("record_num", 100000)
+    option.set("processor_num", 2)
     if option.parse_option() is False:
         return
     # option.set("quiet", True)
