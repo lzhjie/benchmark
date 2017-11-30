@@ -28,7 +28,7 @@ cpdef benchmark_cython(theme, data, watch, func, func_hook, context):
         next_level = size
     record = PyTuple_New(3)
     kv = Py_BuildValue("(ii)", 0, 0)
-    # tuple 必选先初始化item，否则Segmentation fault (core dumped)
+    # tuple 必须先初始化item，否则Segmentation fault (core dumped)
     PyTuple_SetItem(record, 0, kv)
     PyTuple_SetItem(record, 1, PyInt_FromLong(0))
     PyTuple_SetItem(record, 2, PyInt_FromLong(last_index))
@@ -40,8 +40,10 @@ cpdef benchmark_cython(theme, data, watch, func, func_hook, context):
         if not func(<object>record):
             failed_counter += 1
         if index >= next_level:
-            func_hook(theme, <object>record, index, context)
+            func_hook(theme, <object>record, context)
             next_level += step
+            if next_level > last_index:
+                next_level = last_index
         key += 1
     watch.stop()
     Py_XDECREF(record)

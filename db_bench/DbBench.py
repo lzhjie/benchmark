@@ -47,6 +47,7 @@ class Options(toolsOptions):
 
 
 class DbConnection(object):
+    """type(record)->((k, v), index, last_index)"""
     def __init__(self, options):
         self.name = options.get("_name")
         self.host = options.get("host")
@@ -216,8 +217,10 @@ def benchmark(theme, data, watch, func, func_hook, context):
             if not func(record):
                 failed_counter += 1
             if index >= next_level:
-                __func_hook(theme, record, index, __context)
+                __func_hook(theme, record, __context)
                 next_level += step
+                if next_level > last_index:
+                    next_level = last_index
     else:
         for index in range(size):
             kv = __func_get_kv(index)
@@ -298,18 +301,18 @@ def process_func(msg, context):
     options = context["options"]
     options.set("_id", id)
 
-    def progress_bar(theme, record, cur_index, context):
-        bar, bar_index, lastindex = context
+    def progress_bar(theme, record, context):
+        bar, bar_index = context
+        cur_index, last_index = record[1:]
         if bar.check(bar_index, cur_index + 1):
             bar.print_bar(bar_index, cur_index + 1, "%d %s" % (bar_index + 1, theme))
-            if cur_index == lastindex:
+            if cur_index == last_index:
                 bar.reset(bar_index)
 
-    data_count = context["data_count"]
+    data_count = context["_data_count"]
     key_start = options.get("key_start")
     data = context["data_class"](data_count, key_start + id * data_count, options)
     bar_index = id - 1
-    lastindex = len(data) - 1
     conn_c = context["connection_class"]
     connection = conn_c(options)
     try:
@@ -317,7 +320,7 @@ def process_func(msg, context):
             db_bench = DbBench(connection, data)
         else:
             db_bench = DbBench(connection, data,
-                               hook_func=progress_bar, context=(multi_bar, bar_index, lastindex))
+                               hook_func=progress_bar, context=(multi_bar, bar_index))
             multi_bar.reset(id)
         db_bench.test_insert()
         db_bench.test_search()
@@ -350,7 +353,7 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
         record_num = record_num_max
         print ("change record_num to %d" % record_num)
 
-    count_per_processor = record_num / processor_num
+    count_per_processor = int(record_num / processor_num)
     if count_per_processor <= 0:
         print("count_per_processor is 0")
         return
@@ -379,7 +382,7 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
     context = {
         "data_class": data_class,
         "connection_class": connection_class,
-        "data_count": count_per_processor,
+        "_data_count": count_per_processor,
         "bar": bar,
         "lock": Lock(),
         "queue": queue,
@@ -433,38 +436,30 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
 
 class ConnectionExample(DbConnection):
     def __init__(self, options):
-        import time
-        self.sleep = time.sleep
         super(ConnectionExample, self).__init__(options)
         self.__client = None
 
     def connect(self):
-        print("connect")
         self.__client = {}
 
     def disconnect(self):
-        print("disconnect")
         self.__client = None
 
     def insert(self, record):
-        self.sleep(0.01)
-        k, v = record[:2]
+        k, v = record[0]
         self.__client[k] = v
         return True
 
     def search(self, record):
-        self.sleep(0.01)
-        k, v = record[:2]
+        k, v = record[0]
         self.__client[k] = v
         return self.__client.get(k) == v
 
     def update(self, record):
-        self.sleep(0.01)
         return self.search(record)
 
     def delete(self, record):
-        self.sleep(0.01)
-        k, v = record[:2]
+        k, v = record[0]
         return self.__client.pop(k, None) is not None
 
     def clear(self):
@@ -473,10 +468,10 @@ class ConnectionExample(DbConnection):
 
 def example():
     option = Options()
+    option.set("record_num", 3003)
+    option.set("processor_num", 3)
     if option.parse_option() is False:
         return
-    option.set("record_num", 100)
-    option.set("processor_num", 2)
     # option.set("quiet", True)
     print(option)
     result = multi_process_bench(option, ConnectionExample)
