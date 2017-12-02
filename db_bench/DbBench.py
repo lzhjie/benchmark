@@ -120,26 +120,6 @@ class DbConnection(object):
                (self.id, self.name, self.table, self.host, self.port)
 
 
-class Record(object):
-    def __init__(self, key, value, id=0, is_tail=False):
-        self.__record = (key, value, id, is_tail)
-
-    def key(self):
-        return self.__record[0]
-
-    def value(self):
-        return self.__record[1]
-
-    def id(self):
-        return self.__record[2]
-
-    def is_tail(self):
-        return self.__record[3]
-
-    def set_all(self, all):
-        self.__record = all
-
-
 class Data(object):
     def __init__(self, size, range_l=10000, options=None):
         self.__size = int(size)
@@ -149,23 +129,20 @@ class Data(object):
         self.__cursor = int(0)
         self.reset()
 
-    def hook_get_item(self, index):
-        return None
-
     def hook_reset(self):
         pass
+
+    def hook_get_key_and_value(self, index):
+        return (None, None)
 
     def reset(self):
         self.__cursor = 0
         self.hook_reset()
 
-    def hook_get_key_and_value(self, index):
-        return (None, None)
-
     def next(self):
         if self.__cursor >= self.__size:
             raise StopIteration()
-        item = self.hook_get_item(self.__cursor)
+        item = self.hook_get_key_and_value(self.__cursor)
         self.__cursor += 1
         return item
 
@@ -182,12 +159,6 @@ class Data(object):
 class DataRecord(Data):
     def __init__(self, size, range_l=10000, options=None):
         super(DataRecord, self).__init__(size, range_l, options)
-        self.__record = Record("Null", "Null")
-
-    def hook_get_item(self, index):
-        k, v = self.hook_get_key_and_value(index)
-        self.__record.set_all((k, v, index, index + 1 == self.size))
-        return self.__record
 
     def hook_get_key_and_value(self, index):
         key = str(index + self.range_l)
