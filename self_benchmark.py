@@ -3,12 +3,13 @@
 import os, shutil
 from db_bench.DbBench import DbConnection, multi_process_bench, Options, \
     Data, DataRandom, DataFile, DataRecord
-from db_bench.benchmarkjson2csv import json2csv
+from echarts_data import echarts
 
 
 class EmptyConnection(DbConnection):
     name = "empty"
-    def __init__(self,options):
+
+    def __init__(self, options):
         super(EmptyConnection, self).__init__(options)
 
     def disconnect(self):
@@ -17,9 +18,11 @@ class EmptyConnection(DbConnection):
     def connect(self):
         pass
 
+    @DbConnection.benchmark(u"增加")
     def insert(self, record):
         return self._warm_up(record)
 
+    @DbConnection.benchmark(u"删除")
     def delete(self, record):
         return self._warm_up(record)
 
@@ -41,15 +44,18 @@ class PythonDict(DbConnection):
     def tear_down(self):
         pass
 
+    @DbConnection.benchmark(u"增加")
     def insert(self, record):
-        k,v = record[0]
+        k, v = record[0]
         self.__dict[k] = v
         return True
 
+    @DbConnection.benchmark(u"查找")
     def search(self, record):
-        k,v = record[0]
+        k, v = record[0]
         return self.__dict[k] == v
 
+    @DbConnection.benchmark(u"删除")
     def delete(self, record):
         k, v = record[0]
         return self.__dict.pop(k, None) is not None
@@ -66,7 +72,6 @@ if __name__ == "__main__":
     print(option)
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir, ignore_errors=True)
-
     option.set("quiet", False)
     option.set("tag", "-q false DataRecord")
     multi_process_bench(option, EmptyConnection, DataRecord)
@@ -83,18 +88,4 @@ if __name__ == "__main__":
     option.set("file", __file__)
     multi_process_bench(option, EmptyConnection, DataFile)
 
-
-    file_name = json2csv(out_dir)
-    with open(file_name) as fp:
-        print(fp.read())
-    try:
-        from db_bench.csv2echartsjs import csv2js
-        if os.name.lower() == "nt":  # windows
-            csv2js(file_name, "echarts")
-            import webbrowser
-            webbrowser.open("file:///%s" % os.path.abspath("echarts/benchmark.html"))
-        else:
-            csv2js(file_name, out_dir)
-    except:
-        import sys
-        print(sys.exc_info())
+    echarts(out_dir)

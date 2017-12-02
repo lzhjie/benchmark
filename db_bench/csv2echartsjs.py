@@ -3,22 +3,23 @@
 import json, os
 import pandas as pd
 
-default_columns = [("QPS_S","查询"), ("QPS_I","增加"),
-                   ("QPS_U","修改"), ("QPS_D","删除"),
-                   ("FAIL", "失败")]
 default_title = "数据库性能报告"
 
 
-def csv2js(file_csv, our_dir=".", columns=default_columns, title=default_title):
-    cont = pd.read_csv(file_csv)
+def csv2js(file_csv, our_dir=".", title=default_title):
+    cont = pd.read_csv(file_csv, encoding='utf-8')
+    columns = set(cont.columns)
+    except_columns = set(("NAME", "SUM", "FAIL"))
+    columns -= except_columns
     csv_obj = {"title": title,
                "category": [item.replace("_", "\n", 3) for item in cont["NAME"].values],
                "series": []}
     series = csv_obj["series"]
-    for k, v in columns:
-        if cont[k].sum() > 0:
-            series.append({"type": k, "legend": v,
-                           "data": [int(x) for x in cont[k].values]})
+    for column in columns:
+        if cont[column].sum() > 0:
+            series.append({"type": column,
+                           "legend": column,
+                           "data": [int(x) for x in cont[column].values]})
     file_name = "%s/benchmark.js" % (our_dir)
     with open(file_name, "w") as fp:
         fp.write("var benchmark_data = ")

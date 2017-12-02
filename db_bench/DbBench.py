@@ -48,6 +48,8 @@ class Options(toolsOptions):
 
 class DbConnection(object):
     """type(record)->((k, v), index, last_index)"""
+    _benchmark_funcs = {}
+
     def __init__(self, options):
         self.name = options.get("_name")
         self.host = options.get("host")
@@ -57,6 +59,31 @@ class DbConnection(object):
         self.quiet = options.get("quiet")
         self.record_num = options.get("_count_per_processor")
         self.options = options
+        self._benchmark_funcs = {}
+        default_funcs = ("insert", "search", "update", "delete")
+        for func_name in default_funcs:
+            func = getattr(self, func_name, None)
+            func_self = getattr(DbConnection, func_name, None)
+            if getattr(func, "__code__") != getattr(func_self, "__code__"):
+                self._benchmark_funcs[func.__name__] = func
+        for func in self.__class__.__dict__.values():
+            if getattr(func, "benchmark", None) is True:
+                self._benchmark_funcs[func.__name__] = getattr(self, func.__name__)
+
+    @staticmethod
+    def benchmark(label=None):
+        """:param name, for echarts label"""
+
+        def _benchmark(func):
+            func.benchmark = True
+            func.label = label
+            return func
+
+        return _benchmark
+
+    def benchmark_funcs(self):
+        """benchmark_funcs()->{func_name: func}"""
+        return self._benchmark_funcs
 
     def connect(self):
         raise NotImplemented
@@ -273,26 +300,16 @@ class DbBench:
         self.__result[theme] = {}
         stat = self.__result[theme]
         size = len(self.data)
+        stat["label"] = getattr(func, "label", theme)
         stat["sum"] = size
         stat["cost"] = cost
         stat["qps"] = float("%.3f" % (size / cost))
         stat["fail"] = failed_counter
 
-    def test_insert(self):
-        if self.conn.__class__.__dict__.get("insert"):
-            self.__test_func(self.conn.insert, "insert")
-
-    def test_search(self):
-        if self.conn.__class__.__dict__.get("search"):
-            self.__test_func(self.conn.search, "search")
-
-    def test_update(self):
-        if self.conn.__class__.__dict__.get("update"):
-            self.__test_func(self.conn.update, "update")
-
-    def test_delete(self):
-        if self.conn.__class__.__dict__.get("delete"):
-            self.__test_func(self.conn.delete, "delete")
+    def benchmark(self):
+        funcs = self.conn.benchmark_funcs()
+        for name, func in funcs.items():
+            self.__test_func(func, name)
 
 
 def process_func(msg, context):
@@ -326,10 +343,7 @@ def process_func(msg, context):
             multi_bar.reset(id)
         queue_startline.put(id)
         semaphore.acquire()
-        db_bench.test_insert()
-        db_bench.test_search()
-        db_bench.test_update()
-        db_bench.test_delete()
+        db_bench.benchmark()
         context["queue"].put(db_bench.get_result(), True)
     finally:
         if db_bench:
@@ -397,6 +411,7 @@ def multi_process_bench(options, connection_class, data_class=DataRecord):
         "options": copy.deepcopy(options)
     }
     pool = MultiProcess(processor_num, process_func, context, True)
+    # barrier lock
     for i in range(processor_num):
         semaphore.acquire()
     for i in range(processor_num):
@@ -458,6 +473,10 @@ class ConnectionExample(DbConnection):
 
     def disconnect(self):
         self.__client = None
+
+    @DbConnection.benchmark(u"测试")
+    def null(self, record):
+        return True
 
     def insert(self, record):
         k, v = record[0]

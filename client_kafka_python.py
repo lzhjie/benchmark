@@ -5,9 +5,9 @@ from db_bench.DbBench import DbConnection, multi_process_bench, Options, Option,
 from kafka import KafkaProducer, KafkaConsumer, TopicPartition
 
 kafka_options = list(Options.options)
-kafka_options.append(Option("partition", "P", 0))
-kafka_options.append(Option("file", "f", ".".join(os.path.abspath(__file__).split(".")[:-1]) + ".py"))
-kafka_options.append(Option("length", "l", 0))
+kafka_options.append(Option("partition", "-P", 0))
+kafka_options.append(Option("file", "-f", ".".join(os.path.abspath(__file__).split(".")[:-1]) + ".py"))
+kafka_options.append(Option("length", "-l", 0))
 
 
 class KafkaMsg(Data):
@@ -64,7 +64,8 @@ class KafkaPython(DbConnection):
         self.__producer = None
         self.__consumer = None
 
-    def insert(self, record):
+    @DbConnection.benchmark(u"生产")
+    def producer(self, record):
         (k, v), index, last_index = record
         v = str(v)
         try:
@@ -80,7 +81,8 @@ class KafkaPython(DbConnection):
             print("++ " + v)
         return True
 
-    def search(self, record):
+    @DbConnection.benchmark(u"消费")
+    def consumer(self, record):
         k, v = record[0]
         v = str(v)
         if self.__consumer_interrupt:

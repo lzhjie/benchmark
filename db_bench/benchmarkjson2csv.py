@@ -1,6 +1,6 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
-import os, re, json
+import os, re, json, sys
 
 
 def find_files(dir, pattarn, recursion=False):
@@ -17,33 +17,46 @@ def find_files(dir, pattarn, recursion=False):
 
 
 def json2csv(dir="."):
-    column = ("NAME", "QPS_I", "QPS_S", "QPS_U", "QPS_D", "SUM", "FAIL")
-    rows = []
+    columns = ["NAME", "SUM", "FAIL"]
+    benchmark_col = set()
+    benchmarks = []
     files = find_files(dir, "^benchmark.*?.json$")
     files.sort(key=lambda x: os.stat(x).st_ctime)
-    empty = {'fail': 0, 'qps': 0.0, 'sum': 0, 'cost': 0.0}
     for file in files:
         with open(file, "r") as fp:
             bench = json.load(fp)
         stat = bench["stat"]
-        stat_i = stat.get("insert", empty)
-        stat_s = stat.get("search", empty)
-        stat_u = stat.get("update", empty)
-        stat_d = stat.get("delete", empty)
-        fail = stat_i["fail"] + stat_s["fail"] + stat_u["fail"] + stat_d["fail"]
-        sum = stat_i["sum"]
+        fail = 0
+        sum = 0
+        benchmark = {}
+        for k, v in stat.items():
+            label = v["label"]
+            benchmark_col.add(label)
+            benchmark[label] = v["qps"]
+            fail += v["fail"]
+            sum = max(sum, v["sum"])
+        benchmark["SUM"] = sum
+        benchmark["FAIL"] = fail
         name = os.path.basename(file).split(".")[0]
         name = name.split("_", 1)[1].replace(",", " ")
-        rows.append((name, stat_i["qps"], stat_s["qps"], stat_u["qps"], stat_d["qps"], sum, fail))
-    # rows = sorted(rows, key=lambda x: x[0], reverse=True)
+        benchmark["NAME"] = name
+        benchmarks.append(benchmark)
+
     # print rows
     csv_file_name = "%s/benchmark.csv" % (dir)
-    with open(csv_file_name, "w") as fp:
-        fp.write(",".join(column))
-        fp.write("\n")
-        for row in rows:
-            fp.write(",".join([str(x) for x in row]))
-            fp.write("\n")
+    with open(csv_file_name, "wb") as fp:
+        columns.extend(benchmark_col)
+        bytes_utf8 = bytearray(",".join(columns), "utf-8")
+        if sys.version_info.major >= 3:
+            bytes_utf8 = bytes(bytes_utf8)
+        fp.write(bytes_utf8)
+        fp.write("\r\n")
+        for benchmark in benchmarks:
+            bytes_utf8 = bytearray(",".join([str(benchmark.get(col, 0)) for col in columns]), "utf-8")
+            if sys.version_info.major >= 3:
+                bytes_utf8 = bytes(bytes_utf8)
+            fp.write(bytes_utf8)
+            fp.write("\r\n")
     return csv_file_name
 
 
