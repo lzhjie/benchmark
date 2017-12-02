@@ -10,7 +10,7 @@ def echarts(dir, csv_file=None):
     try:
         import pandas as pd
         from db_bench.csv2echartsjs import csv2js
-
+        pd.set_option('display.width', 0)
         print(pd.read_csv(file_name, encoding="utf-8"))
         if os.name.lower() == "nt":  # windows
             csv2js(file_name, "echarts")

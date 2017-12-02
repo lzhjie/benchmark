@@ -50,13 +50,13 @@ def json2csv(dir="."):
         if sys.version_info.major >= 3:
             bytes_utf8 = bytes(bytes_utf8)
         fp.write(bytes_utf8)
-        fp.write("\r\n")
+        fp.write(b"\r\n")
         for benchmark in benchmarks:
             bytes_utf8 = bytearray(",".join([str(benchmark.get(col, 0)) for col in columns]), "utf-8")
             if sys.version_info.major >= 3:
                 bytes_utf8 = bytes(bytes_utf8)
             fp.write(bytes_utf8)
-            fp.write("\r\n")
+            fp.write(b"\r\n")
     return csv_file_name
 
 
