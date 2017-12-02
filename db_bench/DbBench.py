@@ -2,7 +2,7 @@
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 import datetime, random, os, sys, copy, json
 
-if sys.version_info.major == 3:
+if sys.version_info.major >= 3:
     from .tools.StopWatch import StopWatch
     from .tools.ProgressBar import ProgressBar, MultiBar
     from .tools.ColorPrint import ColorPrint
