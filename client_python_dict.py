@@ -1,6 +1,6 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
-from db_bench.DbBench import DbConnection, multi_process_bench, Options
+from db_bench import DbConnection, multi_process_bench, Options
 
 
 class PythonDict(DbConnection):

@@ -1,7 +1,7 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 import datetime, os
-from db_bench.DbBench import DbConnection, multi_process_bench, Options, Option, Data
+from db_bench import DbConnection, multi_process_bench, Options, Option, Data
 from confluent_kafka import Producer, Consumer, TopicPartition
 
 kafka_options = list(Options.options)

@@ -1,7 +1,7 @@
 # coding: utf-8
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 import os, shutil
-from db_bench.DbBench import DbConnection, multi_process_bench, Options, \
+from db_bench import DbConnection, multi_process_bench, Options, \
     Data, DataRandom, DataFile, DataRecord
 from echarts_data import echarts
 

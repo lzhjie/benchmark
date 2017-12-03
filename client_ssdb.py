@@ -2,7 +2,7 @@
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 
 from ssdb_lib.SSDB import SSDB
-from db_bench.DbBench import DbConnection, multi_process_bench, Options
+from db_bench import DbConnection, multi_process_bench, Options
 
 
 class Ssdb(DbConnection):
