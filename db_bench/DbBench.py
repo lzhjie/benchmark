@@ -48,7 +48,6 @@ class Options(toolsOptions):
 
 class DbConnection(object):
     """type(record)->((k, v), index, last_index)"""
-    _benchmark_funcs = {}
 
     def __init__(self, options):
         self.name = options.get("_name")
@@ -69,21 +68,6 @@ class DbConnection(object):
         for func in self.__class__.__dict__.values():
             if getattr(func, "benchmark", None) is True:
                 self._benchmark_funcs[func.__name__] = getattr(self, func.__name__)
-
-    @staticmethod
-    def benchmark(label=None):
-        """:param name, for echarts label"""
-
-        def _benchmark(func):
-            func.benchmark = True
-            func.label = label
-            return func
-
-        return _benchmark
-
-    def benchmark_funcs(self):
-        """benchmark_funcs()->{func_name: func}"""
-        return self._benchmark_funcs
 
     def connect(self):
         raise NotImplemented
@@ -110,6 +94,21 @@ class DbConnection(object):
     def tear_down(self):
         """invoke after benchmark"""
         raise NotImplemented
+
+    @staticmethod
+    def benchmark(label=None):
+        """:param label, for echarts label"""
+
+        def _benchmark(func):
+            func.benchmark = True
+            func.label = label
+            return func
+
+        return _benchmark
+
+    def benchmark_funcs(self):
+        """benchmark_funcs()->{func_name: func}"""
+        return self._benchmark_funcs
 
     def _warm_up(self, record):
         (k, v), index, last_index = record
@@ -278,7 +277,7 @@ class DbBench:
         stat["fail"] = failed_counter
 
     def benchmark(self):
-        funcs = self.conn.benchmark_funcs()
+        funcs = DbConnection.benchmark_funcs(self.conn)
         for name, func in funcs.items():
             self.__test_func(func, name)
 
