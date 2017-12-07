@@ -30,10 +30,12 @@ class Option:
         if conv is None:
             if default is None:
                 conv = empty
-            elif type(default) == type("") :
-                conv = string2string
-            else:
+            elif type(default) == int :
                 conv = string2int
+            elif type(default) == bool :
+                conv = string2bool
+            else:
+                conv = string2string
         if help and sys.version_info.major == 2:
             help = help.encode("utf-8")
         self.__info = (name, short_name, default, conv, help, mandatory)
@@ -91,7 +93,7 @@ class Options(object):
         value = self.__values.get(name)
         if value is not None:
             return value
-        if default:
+        if default is not None:
             return default
         option = self.__name.get(name, None)
         return None if option is None else option.default
@@ -107,6 +109,8 @@ class Options(object):
                 temp += " -%s %s" % (option.short_name, option.name)
             else:
                 temp += " [-%s %s]" % (option.short_name, option.name)
+        if self.__name.get("help") is None:
+            temp += " [--help]"
         temp += "\r\n"
         return temp
 
@@ -145,7 +149,12 @@ class Options(object):
                 option = self.__name.get(k, None)
                 if option:
                     if v is None or len(v) == 0:
-                        v = option.default
+                        self.__values[option.name] = option.default
+                        continue
+                else:
+                    if k == "help":
+                        print(self.usage() + self.help())
+                        exit(0)
             elif cur_arg.startswith("-"):
                 k = cur_arg[1:]
                 if i >= len(self._args):

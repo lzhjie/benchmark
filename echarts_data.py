@@ -2,7 +2,7 @@
 # Copyright (C) zhongjie luo <l.zhjie@qq.com>
 from db_bench.DbBench import Options, Option
 from db_bench.benchmarkjson2csv import json2csv
-import os
+import os, sys
 
 
 def echarts(dir, csv_file=None):
@@ -21,10 +21,11 @@ def echarts(dir, csv_file=None):
     except:
         with open(file_name, "rb") as fp:
             print(fp.read().decode("utf-8"))
+        print(sys.exc_info())
 
 
 if __name__ == "__main__":
-    options = Options.options
+    options = list(Options.options)
     options.append(Option("csv_file", "f", None))
     options = Options(options)
     if options.parse_option() is False:

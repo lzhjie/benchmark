@@ -32,6 +32,7 @@ class Options(toolsOptions):
                     u"例如用时间来命名每次测试结果的输出文件\r\n"),
         Option("table", "T", "__benchmark"),
         Option("key_start", "k", 10000),
+        Option("w", "w", True, help="warm up, use --w enable"),
         Option("quiet", "q", False, string2bool))
 
     def __init__(self, options=None, args=None):
@@ -70,9 +71,11 @@ class DbConnection(object):
                 self._benchmark_funcs[func.__name__] = getattr(self, func.__name__)
 
     def connect(self):
+        """must override"""
         raise NotImplemented
 
     def disconnect(self):
+        """must override"""
         raise NotImplemented
 
     def insert(self, record):
@@ -101,7 +104,7 @@ class DbConnection(object):
 
         def _benchmark(func):
             func.benchmark = True
-            func.label = label
+            func.label = label if label else func.__name__
             return func
 
         return _benchmark
@@ -242,6 +245,8 @@ class DbBench:
         self.__result = {}
         self.__context = context
         self.__warm_up = False
+        if connection.options.get("w", False) is False:
+            self.__warm_up = True
 
     def __del__(self):
         if self.__connected:
